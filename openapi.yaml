@@ -1,0 +1,272 @@
+openapi: 3.2.0
+info:
+  title: Web Intelligence Collector API
+  description: |
+    API contract for the Web Intelligence Collector.
+
+    The collector accepts URLs, acquires webpage information,
+    processes the collected data, and returns structured results.
+
+    This OpenAPI document describes the API contract only.
+    It does not require FastAPI or any specific implementation framework.
+  version: 1.0.0
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+
+  /crawl:
+    post:
+      summary: Crawl multiple URLs
+      description: |
+        Accepts a list of webpage URLs and returns the crawling
+        and processing result for each URL.
+      operationId: crawlUrls
+      security: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrawlRequest'
+
+            example:
+              urls:
+                - https://example.com/page1
+                - https://example.com/page2
+
+      responses:
+
+        '200':
+          description: Crawl operation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrawlResponse'
+
+              example:
+                total_urls: 2
+                successful: 2
+                failed: 0
+                results:
+                  - url: https://example.com/page1
+                    title: Example
+                    status: success
+                    data: {}
+
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '500':
+          description: Internal processing error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  /health:
+    get:
+      summary: Health check
+      description: Returns the health status of the Web Intelligence Collector.
+      operationId: healthCheck
+      security: []
+
+      responses:
+
+        '200':
+          description: Collector is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+              example:
+                status: healthy
+
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+  /results:
+    get:
+      summary: Get collected results
+      description: Returns previously collected results.
+      operationId: getResults
+      security: []
+
+      responses:
+
+        '200':
+          description: Previously collected results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultsResponse'
+
+              example:
+                count: 10
+                results: []
+
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+components:
+
+  schemas:
+
+    CrawlRequest:
+      type: object
+      description: Request containing URLs that should be crawled.
+      required:
+        - urls
+
+      properties:
+
+        urls:
+          type: array
+          description: List of webpage URLs to crawl.
+          minItems: 1
+
+          items:
+            type: string
+            format: uri
+
+
+    CrawlResponse:
+      type: object
+      description: Summary and individual results of a crawl operation.
+
+      required:
+        - total_urls
+        - successful
+        - failed
+        - results
+
+      properties:
+
+        total_urls:
+          type: integer
+          minimum: 0
+          description: Total number of URLs submitted.
+
+        successful:
+          type: integer
+          minimum: 0
+          description: Number of URLs processed successfully.
+
+        failed:
+          type: integer
+          minimum: 0
+          description: Number of URLs that failed.
+
+        results:
+          type: array
+          description: Individual results for each submitted URL.
+          items:
+            $ref: '#/components/schemas/CrawlResult'
+
+
+    CrawlResult:
+      type: object
+      description: Result produced for an individual URL.
+
+      required:
+        - url
+        - status
+
+      properties:
+
+        url:
+          type: string
+          format: uri
+          description: URL that was processed.
+
+        title:
+          type: string
+          description: Title extracted from the webpage.
+
+        status:
+          type: string
+          description: Processing status of the URL.
+          enum:
+            - success
+            - failed
+
+        data:
+          type: object
+          description: Structured information extracted from the webpage.
+          additionalProperties: true
+
+        error:
+          type: string
+          description: Error message when processing fails.
+
+
+    HealthResponse:
+      type: object
+      description: Health status of the collector.
+
+      required:
+        - status
+
+      properties:
+
+        status:
+          type: string
+          description: Current health status of the collector.
+          example: healthy
+
+
+    ResultsResponse:
+      type: object
+      description: Previously collected webpage results.
+
+      required:
+        - count
+        - results
+
+      properties:
+
+        count:
+          type: integer
+          minimum: 0
+          description: Number of collected results.
+
+        results:
+          type: array
+          description: Previously collected results.
+          items:
+            $ref: '#/components/schemas/CrawlResult'
+
+
+    ErrorResponse:
+      type: object
+      description: Error response.
+
+      required:
+        - error
+
+      properties:
+
+        error:
+          type: string
+          description: Description of the error.
